@@ -20,6 +20,17 @@ public class MessageHelpers {
     private static final Handler sHandler = new Handler(Looper.getMainLooper());
     private static float sTextSize;
 
+    /** MEETUBE(toasts): draws a message in the app's own style instead of a Toast; main thread. */
+    public interface Sink {
+        void show(Context context, String message, boolean isLong);
+    }
+
+    private static @Nullable Sink sSink;
+
+    public static void setSink(@Nullable Sink sink) {
+        sSink = sink;
+    }
+
     public static void showMessage(final Context ctx, final String TAG, final Throwable ex) {
         showMessage(ctx, TAG + ": %s", Helpers.toString(ex));
     }
@@ -33,6 +44,15 @@ public class MessageHelpers {
     }
 
     public static void showMessage(final Context ctx, final String msg, final boolean isLong) {
+        showMessage(ctx, msg, isLong, sSink);
+    }
+
+    /** MEETUBE(toasts): a system Toast whatever the sink - for the sink's own last resort. */
+    public static void showToast(final Context ctx, final String msg) {
+        showMessage(ctx, msg, false, null);
+    }
+
+    private static void showMessage(final Context ctx, final String msg, final boolean isLong, @Nullable final Sink sink) {
         if (ctx == null || msg == null || msg.isEmpty()) {
             return;
         }
@@ -42,6 +62,10 @@ public class MessageHelpers {
         Runnable toast = () -> {
             try {
                 String finalMsg = Helpers.ellipsize(msg, MAX_LEN);
+                if (sink != null) {
+                    sink.show(ctx, finalMsg, isLong);
+                    return;
+                }
                 Toast currentToast = Toast.makeText(context, finalMsg, isLong ? Toast.LENGTH_LONG : Toast.LENGTH_SHORT);
                 fixTextSize(currentToast, context);
                 addAndCancelPrev(currentToast);
