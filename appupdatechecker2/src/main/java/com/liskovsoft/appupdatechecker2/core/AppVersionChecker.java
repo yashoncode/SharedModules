@@ -101,10 +101,19 @@ public class AppVersionChecker {
         }
     }
 
+    /** MEETUBE(issue #324): the manifest's changelog key, "zh-TW" for Traditional Chinese, else the language. */
+    private String changelogLanguage() {
+        java.util.Locale locale = LocaleUtility.getCurrentLocale(mContext);
+        String language = locale.getLanguage().toLowerCase();
+        String country = locale.getCountry();
+        boolean traditional = "TW".equals(country) || "HK".equals(country) || "Hant".equals(locale.getScript());
+        return "zh".equals(language) && traditional ? "zh-TW" : language;
+    }
+
     private void triggerFromJson(JSONObject jo) throws JSONException {
         // NEWTUBE(update-flow): parsing lives in UpdateManifest (pure Java, unit-tested); the
         // listener decides what's newer, and gets every version's notes rather than one flat list.
-        UpdateManifest manifest = UpdateManifest.parse(jo, DeviceHelpers.getPrimaryAbi(), LocaleUtility.getCurrentLanguage(mContext));
+        UpdateManifest manifest = UpdateManifest.parse(jo, DeviceHelpers.getPrimaryAbi(), changelogLanguage());
         mVersionInfo = manifest.packageInfo;
 
         final Uri[] downloadUrls = new Uri[manifest.downloadUrls.size()];
